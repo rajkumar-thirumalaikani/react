@@ -48,6 +48,7 @@ import {
   disableLegacyMode,
   enableNoCloningMemoCache,
   enableContextProfiling,
+  enableUseResourceEffectHook,
 } from 'shared/ReactFeatureFlags';
 import {
   REACT_CONTEXT_TYPE,
@@ -2639,6 +2640,14 @@ function updateEffect(
   updateEffectImpl(PassiveEffect, HookPassive, create, deps);
 }
 
+function mountResourceEffect() {
+  throw new Error('Not implemented.');
+}
+
+function updateResourceEffect() {
+  throw new Error('Not implemented.');
+}
+
 function useEffectEventImpl<Args, Return, F: (...Array<Args>) => Return>(
   payload: EventFunctionPayload<Args, Return, F>,
 ) {
@@ -3789,6 +3798,9 @@ if (enableUseMemoCacheHook) {
 if (enableUseEffectEventHook) {
   (ContextOnlyDispatcher: Dispatcher).useEffectEvent = throwInvalidHookError;
 }
+if (enableUseResourceEffectHook) {
+  (ContextOnlyDispatcher: Dispatcher).useResourceEffect = throwInvalidHookError;
+}
 if (enableAsyncActions) {
   (ContextOnlyDispatcher: Dispatcher).useHostTransitionStatus =
     throwInvalidHookError;
@@ -3831,6 +3843,9 @@ if (enableUseMemoCacheHook) {
 }
 if (enableUseEffectEventHook) {
   (HooksDispatcherOnMount: Dispatcher).useEffectEvent = mountEvent;
+}
+if (enableUseResourceEffectHook) {
+  (HooksDispatcherOnMount: Dispatcher).useResourceEffect = mountResourceEffect;
 }
 if (enableAsyncActions) {
   (HooksDispatcherOnMount: Dispatcher).useHostTransitionStatus =
@@ -3875,6 +3890,10 @@ if (enableUseMemoCacheHook) {
 if (enableUseEffectEventHook) {
   (HooksDispatcherOnUpdate: Dispatcher).useEffectEvent = updateEvent;
 }
+if (enableUseResourceEffectHook) {
+  (HooksDispatcherOnUpdate: Dispatcher).useResourceEffect =
+    updateResourceEffect;
+}
 if (enableAsyncActions) {
   (HooksDispatcherOnUpdate: Dispatcher).useHostTransitionStatus =
     useHostTransitionStatus;
@@ -3917,6 +3936,10 @@ if (enableUseMemoCacheHook) {
 }
 if (enableUseEffectEventHook) {
   (HooksDispatcherOnRerender: Dispatcher).useEffectEvent = updateEvent;
+}
+if (enableUseResourceEffectHook) {
+  (HooksDispatcherOnRerender: Dispatcher).useResourceEffect =
+    updateResourceEffect;
 }
 if (enableAsyncActions) {
   (HooksDispatcherOnRerender: Dispatcher).useHostTransitionStatus =
@@ -4106,6 +4129,14 @@ if (__DEV__) {
         currentHookNameInDev = 'useEffectEvent';
         mountHookTypesDev();
         return mountEvent(callback);
+      };
+  }
+  if (enableUseResourceEffectHook) {
+    (HooksDispatcherOnMountInDEV: Dispatcher).useResourceEffect =
+      function useResourceEffect() {
+        currentHookNameInDev = 'useResourceEffect';
+        mountHookTypesDev();
+        return mountResourceEffect();
       };
   }
   if (enableAsyncActions) {
@@ -4300,6 +4331,14 @@ if (__DEV__) {
         return mountEvent(callback);
       };
   }
+  if (enableUseResourceEffectHook) {
+    (HooksDispatcherOnMountWithHookTypesInDEV: Dispatcher).useResourceEffect =
+      function useResourceEffect() {
+        currentHookNameInDev = 'useResourceEffect';
+        updateHookTypesDev();
+        return mountResourceEffect();
+      };
+  }
   if (enableAsyncActions) {
     (HooksDispatcherOnMountWithHookTypesInDEV: Dispatcher).useHostTransitionStatus =
       useHostTransitionStatus;
@@ -4491,6 +4530,14 @@ if (__DEV__) {
         return updateEvent(callback);
       };
   }
+  if (enableUseResourceEffectHook) {
+    (HooksDispatcherOnUpdateInDEV: Dispatcher).useResourceEffect =
+      function useResourceEffect() {
+        currentHookNameInDev = 'useResourceEffect';
+        updateHookTypesDev();
+        return updateResourceEffect();
+      };
+  }
   if (enableAsyncActions) {
     (HooksDispatcherOnUpdateInDEV: Dispatcher).useHostTransitionStatus =
       useHostTransitionStatus;
@@ -4680,6 +4727,14 @@ if (__DEV__) {
         currentHookNameInDev = 'useEffectEvent';
         updateHookTypesDev();
         return updateEvent(callback);
+      };
+  }
+  if (enableUseResourceEffectHook) {
+    (HooksDispatcherOnRerenderInDEV: Dispatcher).useResourceEffect =
+      function useResourceEffect() {
+        currentHookNameInDev = 'useResourceEffect';
+        updateHookTypesDev();
+        return updateResourceEffect();
       };
   }
   if (enableAsyncActions) {
@@ -4895,6 +4950,15 @@ if (__DEV__) {
         warnInvalidHookAccess();
         mountHookTypesDev();
         return mountEvent(callback);
+      };
+  }
+  if (InvalidNestedHooksDispatcherOnMountInDEV) {
+    (HooksDispatcherOnRerenderInDEV: Dispatcher).useResourceEffect =
+      function useResourceEffect() {
+        currentHookNameInDev = 'useResourceEffect';
+        warnInvalidHookAccess();
+        mountHookTypesDev();
+        return mountResourceEffect();
       };
   }
   if (enableAsyncActions) {
@@ -5115,6 +5179,15 @@ if (__DEV__) {
         return updateEvent(callback);
       };
   }
+  if (enableUseResourceEffectHook) {
+    (InvalidNestedHooksDispatcherOnUpdateInDEV: Dispatcher).useResourceEffect =
+      function useResourceEffect() {
+        currentHookNameInDev = 'useResourceEffect';
+        warnInvalidHookAccess();
+        updateHookTypesDev();
+        return updateResourceEffect();
+      };
+  }
   if (enableAsyncActions) {
     (InvalidNestedHooksDispatcherOnUpdateInDEV: Dispatcher).useHostTransitionStatus =
       useHostTransitionStatus;
@@ -5331,6 +5404,15 @@ if (__DEV__) {
         warnInvalidHookAccess();
         updateHookTypesDev();
         return updateEvent(callback);
+      };
+  }
+  if (enableUseResourceEffectHook) {
+    (InvalidNestedHooksDispatcherOnRerenderInDEV: Dispatcher).useResourceEffect =
+      function useResourceEffect() {
+        currentHookNameInDev = 'useResourceEffect';
+        warnInvalidHookAccess();
+        updateHookTypesDev();
+        return updateResourceEffect();
       };
   }
   if (enableAsyncActions) {

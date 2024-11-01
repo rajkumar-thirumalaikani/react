@@ -41,6 +41,7 @@ let waitFor;
 let waitForThrow;
 let waitForPaint;
 let assertLog;
+let useResourceEffect;
 
 describe('ReactHooksWithNoopRenderer', () => {
   beforeEach(() => {
@@ -66,6 +67,7 @@ describe('ReactHooksWithNoopRenderer', () => {
     useDeferredValue = React.useDeferredValue;
     Suspense = React.Suspense;
     Activity = React.unstable_Activity;
+    useResourceEffect = React.experimental_useResourceEffect;
     ContinuousEventPriority =
       require('react-reconciler/constants').ContinuousEventPriority;
     if (gate(flags => flags.enableSuspenseList)) {
@@ -3249,6 +3251,62 @@ describe('ReactHooksWithNoopRenderer', () => {
         root3.render(null);
         await waitForThrow('is not a function');
       });
+    });
+  });
+
+  // @gate enableUseResourceEffectHook
+  describe('useResourceEffect', () => {
+    it.skip('simple mount and update', async () => {
+      const root = ReactNoop.createRoot();
+      class Resource {
+        id: string;
+        opts: mixed;
+        constructor(id, opts) {
+          this.id = id;
+          this.opts = opts;
+          Scheduler.log(`create(${this.id}, ${this.opts})`);
+        }
+        update(opts) {
+          this.opts = opts;
+          Scheduler.log(`update(${this.id}, ${this.opts})`);
+        }
+        destroy() {
+          Scheduler.log(`destroy(${this.id}, ${this.opts})`);
+        }
+      }
+
+      function App({id, username}) {
+        const opts = useMemo(() => {
+          return {username};
+        }, [username]);
+        useResourceEffect(
+          () => new Resource(id, opts),
+          [id],
+          resource => {
+            resource.update(opts);
+          },
+          [opts],
+          resource => {
+            resource.disconnect();
+          },
+        );
+        return null;
+      }
+
+      await act(() => {
+        root.render(<App id={1} username="Jack" />);
+      });
+      assertLog(['create(1, Jack)']);
+
+      await act(() => {
+        root.render(<App id={1} username="Lauren" />);
+      });
+      assertLog(['create(1, Lauren)']);
+
+      await act(() => {
+        root.render(null);
+      });
+      assertLog(['destroy(1, Lauren)']);
     });
   });
 
