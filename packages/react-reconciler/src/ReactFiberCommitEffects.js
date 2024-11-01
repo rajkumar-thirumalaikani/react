@@ -71,6 +71,7 @@ import {
 } from './ReactFiberCallUserSpace';
 
 import {runWithFiberInDEV} from './ReactCurrentFiber';
+import {ResourceEffectKind} from './ReactFiberHooks';
 
 function shouldProfile(current: Fiber): boolean {
   return (
@@ -156,9 +157,17 @@ export function commitHookEffectListMount(
               setIsRunningInsertionEffect(false);
             }
           } else {
-            const create = effect.create;
             const inst = effect.inst;
-            destroy = create();
+            // seems gross
+            if (effect.kind === ResourceEffectKind) {
+              effect.resource = effect.create();
+              const _destroy = effect.destroy;
+              if (typeof _destroy === 'function') {
+                destroy = () => _destroy(effect.resource);
+              }
+            } else {
+              destroy = effect.create();
+            }
             inst.destroy = destroy;
           }
 

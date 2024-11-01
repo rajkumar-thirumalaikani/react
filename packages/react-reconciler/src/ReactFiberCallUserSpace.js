@@ -14,6 +14,7 @@ import type {CapturedValue} from './ReactCapturedValue';
 
 import {isRendering, setIsRendering} from './ReactCurrentFiber';
 import {captureCommitPhaseError} from './ReactFiberWorkLoop';
+import {ResourceEffectKind} from './ReactFiberHooks';
 
 // These indirections exists so we can exclude its stack frame in DEV (and anything below it).
 // TODO: Consider marking the whole bundle instead of these boundaries.
@@ -177,9 +178,18 @@ export const callComponentWillUnmountInDEV: (
 
 const callCreate = {
   'react-stack-bottom-frame': function (effect: Effect): (() => void) | void {
-    const create = effect.create;
     const inst = effect.inst;
-    const destroy = create();
+    let destroy;
+    // seems gross
+    if (effect.kind === ResourceEffectKind) {
+      effect.resource = effect.create();
+      const _destroy = effect.destroy;
+      if (typeof _destroy === 'function') {
+        destroy = () => _destroy(effect.resource);
+      }
+    } else {
+      destroy = effect.create();
+    }
     inst.destroy = destroy;
     return destroy;
   },
