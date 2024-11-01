@@ -3282,13 +3282,9 @@ describe('ReactHooksWithNoopRenderer', () => {
         useResourceEffect(
           () => new Resource(id, opts),
           [id],
-          resource => {
-            resource.update(opts);
-          },
+          resource => resource.update(opts),
           [opts],
-          resource => {
-            resource.destroy();
-          },
+          resource => resource.destroy(),
         );
         return null;
       }
@@ -3296,17 +3292,66 @@ describe('ReactHooksWithNoopRenderer', () => {
       await act(() => {
         root.render(<App id={1} username="Jack" />);
       });
+      console.log('1st assertion: create jack');
       assertLog(['create(1, Jack)']);
 
       await act(() => {
         root.render(<App id={1} username="Lauren" />);
       });
+      console.log('2nd assertion: update lauren');
       assertLog(['update(1, Lauren)']);
 
       await act(() => {
         root.render(null);
       });
+      console.log('3rd assertion: destroy lauren');
       assertLog(['destroy(1, Lauren)']);
+    });
+
+    it.skip('simple mount with no update', async () => {
+      const root = ReactNoop.createRoot();
+      class Resource {
+        id: string;
+        opts: mixed;
+        constructor(id, opts) {
+          this.id = id;
+          this.opts = opts;
+          Scheduler.log(`create(${this.id}, ${this.opts.username})`);
+        }
+        update(opts) {
+          this.opts = opts;
+          Scheduler.log(`update(${this.id}, ${this.opts.username})`);
+        }
+        destroy() {
+          Scheduler.log(`destroy(${this.id}, ${this.opts.username})`);
+        }
+      }
+
+      function App({id, username}) {
+        const opts = useMemo(() => {
+          return {username};
+        }, [username]);
+        useResourceEffect(
+          () => new Resource(id, opts),
+          [id],
+          resource => resource.update(opts),
+          [opts],
+          resource => resource.destroy(),
+        );
+        return null;
+      }
+
+      await act(() => {
+        root.render(<App id={1} username="Jack" />);
+      });
+      console.log('1st assertion: create jack');
+      assertLog(['create(1, Jack)']);
+
+      await act(() => {
+        root.render(null);
+      });
+      console.log('3rd assertion: destroy lauren');
+      assertLog(['destroy(1, Jack)']);
     });
   });
 

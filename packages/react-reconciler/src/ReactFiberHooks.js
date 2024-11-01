@@ -2726,24 +2726,14 @@ function mountResourceEffectImpl(
   updateDeps: Array<mixed> | void | null,
   destroy: (() => void) | void,
 ) {
+  console.log('mountResourceEffectImpl');
   const hook = mountWorkInProgressHook();
   currentlyRenderingFiber.flags |= fiberFlags;
   // update
   hook.memoizedState = pushEffect(
-    hookFlags,
-    createEffectInstance(),
-    ResourceEffectKind,
-    () => {},
-    createDeps,
-    update,
-    updateDeps,
-    destroy,
-  );
-  hook.memoizedState = pushEffect(
     HookHasEffect | hookFlags,
     createEffectInstance(),
     ResourceEffectKind,
-    // $FlowFixMe weird
     create,
     createDeps,
     update,
@@ -2779,65 +2769,122 @@ function updateResourceEffectImpl(
   updateDeps: Array<mixed> | void | null,
   destroy: (() => void) | void,
 ) {
+  // const hook = updateWorkInProgressHook();
+  // const effect: Effect = hook.memoizedState;
+  // const inst = effect.inst;
+
+  // // currentHook is null on initial mount when rerendering after a render phase
+  // // state update or for strict mode.
+  // let updateFlag = hookFlags;
+  // let createFlag = hookFlags;
+  // if (currentHook !== null) {
+  //   if (updateDeps != null) {
+  //     const prevEffect: Effect = currentHook.memoizedState;
+  //     const prevDeps = prevEffect.updateDeps;
+  //     if (areHookInputsEqual(updateDeps, prevDeps)) {
+  //       console.log('update deps is equal');
+  //       updateFlag = hookFlags;
+  //     } else {
+  //       console.log('update deps is not equal');
+  //       updateFlag = HookHasEffect | hookFlags;
+  //     }
+  //   }
+
+  //   if (createDeps != null) {
+  //     // $FlowFixMe
+  //     const prevEffect: Effect = currentHook.memoizedState;
+  //     const prevDeps = prevEffect.createDeps;
+  //     if (areHookInputsEqual(createDeps, prevDeps)) {
+  //       createFlag = hookFlags;
+  //       console.log('create deps is equal');
+  //     } else {
+  //       createFlag = HookHasEffect | hookFlags;
+  //       console.log('create deps is not equal');
+  //     }
+  //   }
+  // }
+
+  // currentlyRenderingFiber.flags |= fiberFlags;
+
+  // hook.memoizedState = pushEffect(
+  //   updateFlag,
+  //   inst,
+  //   ResourceEffectKind,
+  //   () => {},
+  //   createDeps,
+  //   update,
+  //   updateDeps,
+  //   destroy,
+  //   currentHook.memoizedState.resource,
+  // );
+  // hook.memoizedState = pushEffect(
+  //   createFlag,
+  //   inst,
+  //   ResourceEffectKind,
+  //   create,
+  //   createDeps,
+  //   undefined,
+  //   updateDeps,
+  //   undefined,
+  //   undefined,
+  // );
+
+  console.log('updateResourceEffectImpl');
   const hook = updateWorkInProgressHook();
   const effect: Effect = hook.memoizedState;
   const inst = effect.inst;
 
-  // currentHook is null on initial mount when rerendering after a render phase
-  // state update or for strict mode.
-  let updateFlag = hookFlags;
-  let createFlag = hookFlags;
+  const nextCreateDepsArray = createDeps != null ? createDeps : [];
+  const nextUpdateDeps = updateDeps !== undefined ? updateDeps : null;
+  let isCreateDepsSame: boolean;
+  let isUpdateDepsSame: boolean;
   if (currentHook !== null) {
-    if (updateDeps != null) {
-      const prevEffect: Effect = currentHook.memoizedState;
-      const prevDeps = prevEffect.updateDeps;
-      if (areHookInputsEqual(updateDeps, prevDeps)) {
-        console.log('update deps is equal');
-        updateFlag = hookFlags;
-      } else {
-        console.log('update deps is not equal');
-        updateFlag = HookHasEffect | hookFlags;
+    const prevEffect: Effect = currentHook.memoizedState;
+    const prevCreateDepsArray =
+      prevEffect.createDeps != null ? prevEffect.createDeps : [];
+    isCreateDepsSame = areHookInputsEqual(
+      nextCreateDepsArray,
+      prevCreateDepsArray,
+    );
+
+    if (nextUpdateDeps !== null) {
+      const prevUpdateDeps =
+        prevEffect.updateDeps != null ? prevEffect.updateDeps : null;
+      isUpdateDepsSame = areHookInputsEqual(nextUpdateDeps, prevUpdateDeps);
+      console.log({isCreateDepsSame, isUpdateDepsSame});
+      if (isCreateDepsSame && isUpdateDepsSame) {
+        hook.memoizedState = pushEffect(
+          hookFlags,
+          inst,
+          ResourceEffectKind,
+          create,
+          nextUpdateDeps,
+          update,
+          updateDeps,
+          destroy,
+        );
+        hook.memoizedState.resource = prevEffect.resource;
+        return;
       }
     }
 
-    if (createDeps != null) {
-      // $FlowFixMe
-      const prevEffect: Effect = currentHook.memoizedState;
-      const prevDeps = prevEffect.createDeps;
-      if (areHookInputsEqual(createDeps, prevDeps)) {
-        createFlag = hookFlags;
-        console.log('create deps is equal');
-      } else {
-        createFlag = HookHasEffect | hookFlags;
-        console.log('create deps is not equal');
-      }
+    currentlyRenderingFiber.flags |= fiberFlags;
+
+    hook.memoizedState = pushEffect(
+      HookHasEffect | hookFlags,
+      inst,
+      ResourceEffectKind,
+      isCreateDepsSame ? () => {} : create,
+      nextCreateDepsArray,
+      isUpdateDepsSame ? undefined : update,
+      nextUpdateDeps,
+      isCreateDepsSame ? undefined : destroy,
+    );
+    if (currentHook != null) {
+      const currentHookState: Effect = currentHook.memoizedState;
+      hook.memoizedState.resource = currentHookState.resource;
     }
   }
-
-  currentlyRenderingFiber.flags |= fiberFlags;
-
-  hook.memoizedState = pushEffect(
-    updateFlag,
-    inst,
-    ResourceEffectKind,
-    () => {},
-    createDeps,
-    update,
-    updateDeps,
-    destroy,
-    currentHook.memoizedState.resource,
-  );
-  hook.memoizedState = pushEffect(
-    createFlag,
-    inst,
-    ResourceEffectKind,
-    create,
-    createDeps,
-    () => {},
-    updateDeps,
-    destroy,
-    undefined,
-  );
 }
 
 function useEffectEventImpl<Args, Return, F: (...Array<Args>) => Return>(

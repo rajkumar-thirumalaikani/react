@@ -148,30 +148,44 @@ export function commitHookEffectListMount(
 
           // Mount
           let destroy;
-          if (__DEV__) {
-            if ((flags & HookInsertion) !== NoHookEffect) {
-              setIsRunningInsertionEffect(true);
-            }
-            destroy = runWithFiberInDEV(finishedWork, callCreateInDEV, effect);
-            if ((flags & HookInsertion) !== NoHookEffect) {
-              setIsRunningInsertionEffect(false);
+
+          // seems gross
+          if (effect.kind === ResourceEffectKind) {
+            if (effect.resource == null) {
+              effect.resource = effect.create();
+              console.log('create resource:', effect.resource);
+              if (typeof effect.destroy === 'function') {
+                const _destroy = effect.destroy;
+                destroy = () => {
+                  _destroy(effect.resource);
+                  effect.resource = null;
+                  console.log('destroy resource');
+                };
+              }
+            } else if (typeof effect.update === 'function') {
+              // TODO: what about multiple updates?
+              effect.update(effect.resource);
+              console.log('update resource', effect.resource);
             }
           } else {
-            const inst = effect.inst;
-            // seems gross
-            if (effect.kind === ResourceEffectKind) {
-              if (effect.resource == null) {
-                effect.resource = effect.create();
-                console.log('create');
-              } else if (typeof effect.update === 'function') {
-                // TODO: what about multiple updates?
-                effect.update(effect.resource);
-                console.log('update');
+            if (__DEV__) {
+              if ((flags & HookInsertion) !== NoHookEffect) {
+                setIsRunningInsertionEffect(true);
+              }
+              destroy = runWithFiberInDEV(
+                finishedWork,
+                callCreateInDEV,
+                effect,
+              );
+              if ((flags & HookInsertion) !== NoHookEffect) {
+                setIsRunningInsertionEffect(false);
               }
             } else {
-              destroy = effect.create();
+              const create = effect.create;
+              const inst = effect.inst;
+              destroy = create();
+              inst.destroy = destroy;
             }
-            inst.destroy = destroy;
           }
 
           if (enableSchedulingProfiler) {
@@ -255,47 +269,55 @@ export function commitHookEffectListUnmount(
       let effect = firstEffect;
       do {
         if ((effect.tag & flags) === flags) {
-          // Unmount
-          const inst = effect.inst;
-          let destroy = inst.destroy;
-          if (destroy !== undefined) {
-            inst.destroy = undefined;
-            if (enableSchedulingProfiler) {
-              if ((flags & HookPassive) !== NoHookEffect) {
-                markComponentPassiveEffectUnmountStarted(finishedWork);
-              } else if ((flags & HookLayout) !== NoHookEffect) {
-                markComponentLayoutEffectUnmountStarted(finishedWork);
-              }
+          if (effect.kind === ResourceEffectKind) {
+            const inst = effect.inst;
+            const resource = effect.resource;
+            console.log(
+              'check if should call destroy:',
+              resource,
+              effect,
+              inst,
+            );
+            if (resource != null && typeof inst.destroy === 'function') {
+              console.log('safelyCallDestroy', resource);
+              safelyCallDestroy(
+                finishedWork,
+                nearestMountedAncestor,
+                inst.destroy,
+              );
             }
+          } else {
+            // Unmount
+            const inst = effect.inst;
+            const destroy = inst.destroy;
+            if (destroy !== undefined) {
+              inst.destroy = undefined;
+              if (enableSchedulingProfiler) {
+                if ((flags & HookPassive) !== NoHookEffect) {
+                  markComponentPassiveEffectUnmountStarted(finishedWork);
+                } else if ((flags & HookLayout) !== NoHookEffect) {
+                  markComponentLayoutEffectUnmountStarted(finishedWork);
+                }
+              }
 
-            if (__DEV__) {
-              if ((flags & HookInsertion) !== NoHookEffect) {
-                setIsRunningInsertionEffect(true);
+              if (__DEV__) {
+                if ((flags & HookInsertion) !== NoHookEffect) {
+                  setIsRunningInsertionEffect(true);
+                }
               }
-            }
-            if (effect.kind === ResourceEffectKind) {
-              const resource = effect.resource;
-              if (resource != null && typeof effect.destroy === 'function') {
-                const _destroy = effect.destroy;
-                destroy = () => {
-                  console.log('destroy');
-                  _destroy(effect.resource);
-                  effect.resource = null;
-                };
+              safelyCallDestroy(finishedWork, nearestMountedAncestor, destroy);
+              if (__DEV__) {
+                if ((flags & HookInsertion) !== NoHookEffect) {
+                  setIsRunningInsertionEffect(false);
+                }
               }
-            }
-            safelyCallDestroy(finishedWork, nearestMountedAncestor, destroy);
-            if (__DEV__) {
-              if ((flags & HookInsertion) !== NoHookEffect) {
-                setIsRunningInsertionEffect(false);
-              }
-            }
 
-            if (enableSchedulingProfiler) {
-              if ((flags & HookPassive) !== NoHookEffect) {
-                markComponentPassiveEffectUnmountStopped();
-              } else if ((flags & HookLayout) !== NoHookEffect) {
-                markComponentLayoutEffectUnmountStopped();
+              if (enableSchedulingProfiler) {
+                if ((flags & HookPassive) !== NoHookEffect) {
+                  markComponentPassiveEffectUnmountStopped();
+                } else if ((flags & HookLayout) !== NoHookEffect) {
+                  markComponentLayoutEffectUnmountStopped();
+                }
               }
             }
           }

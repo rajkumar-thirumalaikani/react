@@ -178,23 +178,35 @@ export const callComponentWillUnmountInDEV: (
 
 const callCreate = {
   'react-stack-bottom-frame': function (effect: Effect): (() => void) | void {
+    const create = effect.create;
     const inst = effect.inst;
-    let destroy;
-    // seems gross
-    if (effect.kind === ResourceEffectKind) {
-      console.log(effect.resource);
-      if (effect.resource == null) {
-        console.log('callCreate: create resource');
-        effect.resource = effect.create();
-      } else if (typeof effect.update === 'function') {
-        console.log('callCreate: update resource');
-        effect.update(effect.resource);
-      }
-    } else {
-      destroy = effect.create();
-    }
+    const destroy = create();
     inst.destroy = destroy;
     return destroy;
+    // let destroy;
+    // seems gross
+    // if (effect.kind === ResourceEffectKind) {
+    //   console.log('callCreate: resource', effect.resource);
+    //   if (effect.resource == null) {
+    //     console.log('callCreate: create resource');
+    //     effect.resource = effect.create();
+    //   } else if (typeof effect.update === 'function') {
+    //     effect.update(effect.resource);
+    //     console.log('callCreate: update resource: ', effect.resource);
+    //   }
+    //   if (typeof effect.destroy === 'function') {
+    //     const _destroy = effect.destroy;
+    //     destroy = () => {
+    //       _destroy(effect.resource);
+    //       effect.resource = null;
+    //       console.log('callCreate: destroy resource');
+    //     };
+    //   }
+    // } else {
+    // destroy = effect.create();
+    // }
+    // inst.destroy = destroy;
+    // return destroy;
   },
 };
 
