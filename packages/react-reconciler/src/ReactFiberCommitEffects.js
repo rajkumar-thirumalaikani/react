@@ -132,6 +132,7 @@ export function commitHookEffectListMount(
   try {
     const updateQueue: FunctionComponentUpdateQueue | null =
       (finishedWork.updateQueue: any);
+    console.log(updateQueue);
     const lastEffect = updateQueue !== null ? updateQueue.lastEffect : null;
     if (lastEffect !== null) {
       const firstEffect = lastEffect.next;
@@ -152,6 +153,14 @@ export function commitHookEffectListMount(
             if ((flags & HookInsertion) !== NoHookEffect) {
               setIsRunningInsertionEffect(true);
             }
+            console.log('commitHookEffectListMount');
+            if (
+              effect.kind === ResourceEffectKind &&
+              effect.resource != null &&
+              typeof effect.update === 'function'
+            ) {
+              effect.update(effect.resource);
+            }
             destroy = runWithFiberInDEV(finishedWork, callCreateInDEV, effect);
             if ((flags & HookInsertion) !== NoHookEffect) {
               setIsRunningInsertionEffect(false);
@@ -160,7 +169,14 @@ export function commitHookEffectListMount(
             const inst = effect.inst;
             // seems gross
             if (effect.kind === ResourceEffectKind) {
-              effect.resource = effect.create();
+              if (effect.resource == null) {
+                effect.resource = effect.create();
+                console.log('create');
+              } else if (typeof effect.update === 'function') {
+                // TODO: what about multiple updates?
+                effect.update(effect.resource);
+                console.log('update');
+              }
               const _destroy = effect.destroy;
               if (typeof _destroy === 'function') {
                 destroy = () => _destroy(effect.resource);

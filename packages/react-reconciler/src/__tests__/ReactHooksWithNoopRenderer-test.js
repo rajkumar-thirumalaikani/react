@@ -3256,7 +3256,7 @@ describe('ReactHooksWithNoopRenderer', () => {
 
   // @gate enableUseResourceEffectHook
   describe('useResourceEffect', () => {
-    it.skip('simple mount and update', async () => {
+    it.only('simple mount and update', async () => {
       const root = ReactNoop.createRoot();
       class Resource {
         id: string;
@@ -3264,14 +3264,14 @@ describe('ReactHooksWithNoopRenderer', () => {
         constructor(id, opts) {
           this.id = id;
           this.opts = opts;
-          Scheduler.log(`create(${this.id}, ${this.opts})`);
+          Scheduler.log(`create(${this.id}, ${this.opts.username})`);
         }
         update(opts) {
           this.opts = opts;
-          Scheduler.log(`update(${this.id}, ${this.opts})`);
+          Scheduler.log(`update(${this.id}, ${this.opts.username})`);
         }
         destroy() {
-          Scheduler.log(`destroy(${this.id}, ${this.opts})`);
+          Scheduler.log(`destroy(${this.id}, ${this.opts.username})`);
         }
       }
 
@@ -3287,7 +3287,7 @@ describe('ReactHooksWithNoopRenderer', () => {
           },
           [opts],
           resource => {
-            resource.disconnect();
+            resource.destroy();
           },
         );
         return null;
@@ -3301,7 +3301,7 @@ describe('ReactHooksWithNoopRenderer', () => {
       await act(() => {
         root.render(<App id={1} username="Lauren" />);
       });
-      assertLog(['create(1, Lauren)']);
+      assertLog(['update(1, Lauren)']);
 
       await act(() => {
         root.render(null);
