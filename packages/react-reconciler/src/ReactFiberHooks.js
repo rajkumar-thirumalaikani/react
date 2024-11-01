@@ -2542,6 +2542,7 @@ function pushEffect(
   update: (({}) => void) | void,
   updateDeps: Array<mixed> | void | null,
   destroy: (({}) => void) | void,
+  resource: mixed,
 ): Effect {
   // $FlowFixMe jordan help pls
   const effect: Effect = {
@@ -2553,7 +2554,7 @@ function pushEffect(
     updateDeps,
     destroy,
     inst,
-    resource: undefined,
+    resource,
     // Circular
     next: (null: any),
   };
@@ -2727,6 +2728,17 @@ function mountResourceEffectImpl(
 ) {
   const hook = mountWorkInProgressHook();
   currentlyRenderingFiber.flags |= fiberFlags;
+  // update
+  hook.memoizedState = pushEffect(
+    hookFlags,
+    createEffectInstance(),
+    ResourceEffectKind,
+    () => {},
+    createDeps,
+    update,
+    updateDeps,
+    destroy,
+  );
   hook.memoizedState = pushEffect(
     HookHasEffect | hookFlags,
     createEffectInstance(),
@@ -2773,41 +2785,31 @@ function updateResourceEffectImpl(
 
   // currentHook is null on initial mount when rerendering after a render phase
   // state update or for strict mode.
-  if (currentHook !== null) {
-    if (createDeps != null) {
-      const prevEffect: Effect = currentHook.memoizedState;
-      const prevDeps = prevEffect.createDeps;
-      if (areHookInputsEqual(createDeps, prevDeps)) {
-        hook.memoizedState = pushEffect(
-          hookFlags,
-          inst,
-          ResourceEffectKind,
-          create,
-          createDeps,
-          update,
-          updateDeps,
-          destroy,
-        );
-        return;
-      }
-    }
-  }
+  let updateFlag = hookFlags;
+  let createFlag = hookFlags;
   if (currentHook !== null) {
     if (updateDeps != null) {
       const prevEffect: Effect = currentHook.memoizedState;
       const prevDeps = prevEffect.updateDeps;
       if (areHookInputsEqual(updateDeps, prevDeps)) {
-        hook.memoizedState = pushEffect(
-          hookFlags,
-          inst,
-          ResourceEffectKind,
-          create,
-          createDeps,
-          update,
-          updateDeps,
-          destroy,
-        );
-        return;
+        console.log('update deps is equal');
+        updateFlag = hookFlags;
+      } else {
+        console.log('update deps is not equal');
+        updateFlag = HookHasEffect | hookFlags;
+      }
+    }
+
+    if (createDeps != null) {
+      // $FlowFixMe
+      const prevEffect: Effect = currentHook.memoizedState;
+      const prevDeps = prevEffect.createDeps;
+      if (areHookInputsEqual(createDeps, prevDeps)) {
+        createFlag = hookFlags;
+        console.log('create deps is equal');
+      } else {
+        createFlag = HookHasEffect | hookFlags;
+        console.log('create deps is not equal');
       }
     }
   }
@@ -2815,14 +2817,26 @@ function updateResourceEffectImpl(
   currentlyRenderingFiber.flags |= fiberFlags;
 
   hook.memoizedState = pushEffect(
-    HookHasEffect | hookFlags,
+    updateFlag,
     inst,
     ResourceEffectKind,
-    create,
+    () => {},
     createDeps,
     update,
     updateDeps,
     destroy,
+    currentHook.memoizedState.resource,
+  );
+  hook.memoizedState = pushEffect(
+    createFlag,
+    inst,
+    ResourceEffectKind,
+    create,
+    createDeps,
+    () => {},
+    updateDeps,
+    destroy,
+    undefined,
   );
 }
 

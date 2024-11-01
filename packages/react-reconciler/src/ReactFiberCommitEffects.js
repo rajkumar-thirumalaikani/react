@@ -132,7 +132,6 @@ export function commitHookEffectListMount(
   try {
     const updateQueue: FunctionComponentUpdateQueue | null =
       (finishedWork.updateQueue: any);
-    console.log(updateQueue);
     const lastEffect = updateQueue !== null ? updateQueue.lastEffect : null;
     if (lastEffect !== null) {
       const firstEffect = lastEffect.next;
@@ -153,14 +152,6 @@ export function commitHookEffectListMount(
             if ((flags & HookInsertion) !== NoHookEffect) {
               setIsRunningInsertionEffect(true);
             }
-            console.log('commitHookEffectListMount');
-            if (
-              effect.kind === ResourceEffectKind &&
-              effect.resource != null &&
-              typeof effect.update === 'function'
-            ) {
-              effect.update(effect.resource);
-            }
             destroy = runWithFiberInDEV(finishedWork, callCreateInDEV, effect);
             if ((flags & HookInsertion) !== NoHookEffect) {
               setIsRunningInsertionEffect(false);
@@ -176,10 +167,6 @@ export function commitHookEffectListMount(
                 // TODO: what about multiple updates?
                 effect.update(effect.resource);
                 console.log('update');
-              }
-              const _destroy = effect.destroy;
-              if (typeof _destroy === 'function') {
-                destroy = () => _destroy(effect.resource);
               }
             } else {
               destroy = effect.create();
@@ -270,7 +257,7 @@ export function commitHookEffectListUnmount(
         if ((effect.tag & flags) === flags) {
           // Unmount
           const inst = effect.inst;
-          const destroy = inst.destroy;
+          let destroy = inst.destroy;
           if (destroy !== undefined) {
             inst.destroy = undefined;
             if (enableSchedulingProfiler) {
@@ -284,6 +271,17 @@ export function commitHookEffectListUnmount(
             if (__DEV__) {
               if ((flags & HookInsertion) !== NoHookEffect) {
                 setIsRunningInsertionEffect(true);
+              }
+            }
+            if (effect.kind === ResourceEffectKind) {
+              const resource = effect.resource;
+              if (resource != null && typeof effect.destroy === 'function') {
+                const _destroy = effect.destroy;
+                destroy = () => {
+                  console.log('destroy');
+                  _destroy(effect.resource);
+                  effect.resource = null;
+                };
               }
             }
             safelyCallDestroy(finishedWork, nearestMountedAncestor, destroy);

@@ -182,16 +182,13 @@ const callCreate = {
     let destroy;
     // seems gross
     if (effect.kind === ResourceEffectKind) {
+      console.log(effect.resource);
       if (effect.resource == null) {
         console.log('callCreate: create resource');
         effect.resource = effect.create();
       } else if (typeof effect.update === 'function') {
         console.log('callCreate: update resource');
         effect.update(effect.resource);
-      }
-      const _destroy = effect.destroy;
-      if (typeof _destroy === 'function') {
-        destroy = () => _destroy(effect.resource);
       }
     } else {
       destroy = effect.create();
